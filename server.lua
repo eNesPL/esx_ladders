@@ -1,10 +1,4 @@
-ESX = nil
-
-TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
-
-
--- xPlayer.removeInventoryItem('ladder', 1)
--- xPlayer.addInventoryItem('ladder', 1)
+ESX = exports["es_extended"]:getSharedObject()
 
 local Ladders = {}
 local usingLadder = false
@@ -16,7 +10,7 @@ ESX.RegisterUsableItem('ladder', function(source)
 		TriggerClientEvent('Ladders:Client:Local:Add', -1, source)
 		usingLadder = true
 	else
-		TriggerClientEvent('mythic_notify:client:SendAlert', source, { type = 'error', text = Strings[Lang]['already_carrying'], length = 3000})
+		TriggerClientEvent('okokNotify:Alert', source, 'Błąd', Strings[Lang]['already_carrying'], 3000, 'error', true)
 	end
 end)
 
@@ -24,7 +18,7 @@ RegisterServerEvent('Ladders:Server:GiveItem')
 AddEventHandler('Ladders:Server:GiveItem', function()
 	local xPlayer = ESX.GetPlayerFromId(source)
 	xPlayer.addInventoryItem('ladder', 1)
-	TriggerClientEvent('mythic_notify:client:SendAlert', source, { type = 'success', text = Strings[Lang]['put_inv_ladder'], length = 4000})
+	TriggerClientEvent('okokNotify:Alert', source, 'Sukces', Strings[Lang]['put_inv_ladder'], 4000, 'success', true)
 end)
 
 RegisterServerEvent('Ladders:Server:Ladders')
@@ -45,10 +39,8 @@ AddEventHandler('Ladders:Server:Ladders', function(Action, LadderNetID, Key, Val
             end
         elseif Action == 'delete' then
             Ladders[LadderNetID] = nil
-			-- deletes the ladder from the ground and everything
         end
     end
-
     TriggerClientEvent('Ladders:Bounce:ServerValues', -1, Ladders)
 end)
 
