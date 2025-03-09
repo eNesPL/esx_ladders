@@ -1,21 +1,15 @@
-ESX              = nil
 local PlayerData = {}
 
-Citizen.CreateThread(function()
-	while ESX == nil do
-		TriggerEvent('esx:getSharedObject', function(obj) ESX = obj end)
-		Citizen.Wait(0)
-	end
-end)
+ESX = exports["es_extended"]:getSharedObject()
 
 RegisterNetEvent('esx:playerLoaded')
 AddEventHandler('esx:playerLoaded', function(xPlayer)
-  PlayerData = xPlayer   
+    PlayerData = xPlayer   
 end)
 
--- Synced table across all clients and the server
+-- Zsynchronizowana tabela drabin pomiędzy klientem a serwerem
 local Ladders = {}
--- Locally created ladders
+-- Lokalnie tworzone drabiny (przenoszone przez graczy)
 local LocalLadders = {}
 
 local Climbing = false
@@ -25,6 +19,7 @@ local Preview = false
 local PreviewToggle = true
 local Clipset = false
 
+-- Wektorowe animacje wspinania
 local ClimbingVectors = {
     up = {
         {vector3(0.0, -0.45, -1.5), 'laddersbase', 'get_on_bottom_front_stand_high'},
@@ -55,7 +50,7 @@ local ClimbingVectors = {
     }
 }
 
--- Create ladders client side
+-- Tworzenie drabin po stronie klienta
 RegisterNetEvent('Ladders:Client:Local:Add')
 AddEventHandler('Ladders:Client:Local:Add', function(SourceId)
     local SourcePlayer = GetPlayerFromServerId(SourceId)
@@ -69,11 +64,13 @@ AddEventHandler('Ladders:Client:Local:Add', function(SourceId)
         SetEntityCollision(Ladder, false, true)
         LocalLadders[SourcePed] = Ladder
 
-        if GetPlayerServerId(PlayerId()) == SourceId then Carrying = Ladder end
+        if GetPlayerServerId(PlayerId()) == SourceId then 
+            Carrying = Ladder 
+        end
     end
 end)
 
--- Remove local ladder
+-- Usuwanie lokalnej drabiny
 RegisterNetEvent('Ladders:Client:Local:Remove')
 AddEventHandler('Ladders:Client:Local:Remove', function(SourceId)
     local SourcePlayer = GetPlayerFromServerId(SourceId)
@@ -85,13 +82,17 @@ AddEventHandler('Ladders:Client:Local:Remove', function(SourceId)
         ClearPedTasksImmediately(PlayerPed)
         LocalLadders[SourcePed] = nil
 
-        if GetPlayerServerId(PlayerId()) == SourceId then Carrying = nil end
+        if GetPlayerServerId(PlayerId()) == SourceId then 
+            Carrying = nil 
+        end
     end
 end)
 
--- Syncs table across all clients and server
+-- Odbiór zsynchronizowanych wartości drabin z serwera
 RegisterNetEvent('Ladders:Bounce:ServerValues')
-AddEventHandler('Ladders:Bounce:ServerValues', function(NewLadders) Ladders = NewLadders end)
+AddEventHandler('Ladders:Bounce:ServerValues', function(NewLadders) 
+    Ladders = NewLadders 
+end)
 
 RegisterNetEvent('Ladders:Client:DropLadder')
 AddEventHandler('Ladders:Client:DropLadder', function()
@@ -110,7 +111,6 @@ AddEventHandler('Ladders:Client:DropLadder', function()
         TriggerServerEvent('Ladders:Server:Ladders', 'store', LadderNetID)
         TriggerServerEvent('Ladders:Server:Ladders', 'update', LadderNetID, 'BeingCarried', true)
 
-        -- Allow time to drop to the ground
         Citizen.Wait(1000)
 
         local LadderCoords = GetEntityCoords(Ladder)
@@ -129,7 +129,9 @@ RegisterNetEvent('Ladders:Client:Pickup')
 AddEventHandler('Ladders:Client:Pickup', function(LadderNetID)
     if not Carrying and NetworkDoesNetworkIdExist(LadderNetID) then
         NetworkRequestControlOfNetworkId(LadderNetID)
-        while not NetworkHasControlOfNetworkId(LadderNetID) do Citizen.Wait(0) end
+        while not NetworkHasControlOfNetworkId(LadderNetID) do 
+            Citizen.Wait(0) 
+        end
 
         local Ladder = NetToObj(LadderNetID)
 
@@ -186,7 +188,9 @@ AddEventHandler('Ladders:Client:Climb', function(LadderNetID, Direction)
 
         if not HasAnimDictLoaded('laddersbase') then
             RequestAnimDict('laddersbase')
-            while not HasAnimDictLoaded('laddersbase') do Citizen.Wait(0) end
+            while not HasAnimDictLoaded('laddersbase') do 
+                Citizen.Wait(0) 
+            end
         end
 
         ClearPedTasksImmediately(PlayerPed)
@@ -195,12 +199,11 @@ AddEventHandler('Ladders:Client:Climb', function(LadderNetID, Direction)
 
         Climbing = 'rot'
 
-        for Dir, Pack in pairs(ClimbingVectors) do
-            if Direction == Dir then
+        for dirKey, Pack in pairs(ClimbingVectors) do
+            if Direction == dirKey then
                 for _, Element in pairs(Pack) do
                     SetEntityCoordsNoOffset(PlayerPed, GetOffsetFromEntityInWorldCoords(Ladder, Element[1]), false, false, false)
                     TaskPlayAnim(PlayerPed, Element[2], Element[3], 2.0, 0.0, -1, 15, 0, false, false, false)
-
                     Citizen.Wait(850)
                 end
             end
@@ -222,100 +225,87 @@ AddEventHandler('Ladders:Client:Climb', function(LadderNetID, Direction)
     end
 end)
 
-function DrawText3D(x,y,z, text)
-
-    local onScreen,_x,_y=World3dToScreen2d(x,y,z)
-    local px,py,pz=table.unpack(GetGameplayCamCoords())
-    
-    SetTextScale(0.35, 0.35)
-    SetTextFont(4)
-    SetTextProportional(1)
-    SetTextColour(255, 255, 255, 215)
-    SetTextEntry("STRING")
-    SetTextCentre(1)
-    AddTextComponentString(text)
-    DrawText(_x,_y)
-    local factor = (string.len(text)) / 500
-    DrawRect(_x,_y+0.0125, 0.018+ factor, 0.03, 0, 0, 0, 70)
-end
-
--- Gets distance between player and provided coords
+-- Funkcja zwracająca dystans między graczem a podanymi współrzędnymi
 function GetDistanceBetween(Coords)
-	return Vdist(GetEntityCoords(PlayerPedId(), false), Coords.x, Coords.y, Coords.z) + 0.01
+    return Vdist(GetEntityCoords(PlayerPedId(), false), Coords.x, Coords.y, Coords.z) + 0.01
 end
 
--- Resource Master Loop
+-- Rejestracja interakcji dla obiektów o modelu prop_byard_ladder01 przy użyciu ox_target
 Citizen.CreateThread(function()
-	while true do
+    exports.ox_target:addModel({`prop_byard_ladder01`}, {
+        options = {
+            {
+                name = 'ladder_climb',
+                icon = 'fas fa-user',
+                label = 'Wspiąć się na drabinę',
+                canInteract = function(entity)
+                    local netId = ObjToNet(entity)
+                    for _, ladder in pairs(Ladders) do
+                        if ladder.ID == netId then
+                            return ladder.Placed and not ladder.BeingCarried and not Climbing
+                        end
+                    end
+                    return false
+                end,
+                onSelect = function(entity)
+                    local netId = ObjToNet(entity)
+                    for _, ladder in pairs(Ladders) do
+                        if ladder.ID == netId then
+                            local coords = GetEntityCoords(entity)
+                            local topCoords = vector3(ladder.x, ladder.y, ladder.Topz)
+                            local bottomCoords = vector3(ladder.x, ladder.y, ladder.Bottomz)
+                            local topDist = Vdist(coords.x, coords.y, coords.z, topCoords.x, topCoords.y, topCoords.z)
+                            local bottomDist = Vdist(coords.x, coords.y, coords.z, bottomCoords.x, bottomCoords.y, bottomCoords.z)
+                            if topDist > bottomDist then
+                                TriggerServerEvent('Ladders:Server:Ladders', 'climb', ladder.ID, 'up')
+                            else
+                                TriggerServerEvent('Ladders:Server:Ladders', 'climb', ladder.ID, 'down')
+                            end
+                            break
+                        end
+                    end
+                end,
+            },
+            {
+                name = 'ladder_pickup',
+                icon = 'fas fa-hand-paper',
+                label = 'Podnieś drabinę',
+                canInteract = function(entity)
+                    local netId = ObjToNet(entity)
+                    for _, ladder in pairs(Ladders) do
+                        if ladder.ID == netId then
+                            return ladder.Dropped or ladder.Placed
+                        end
+                    end
+                    return false
+                end,
+                onSelect = function(entity)
+                    local netId = ObjToNet(entity)
+                    TriggerServerEvent('Ladders:Server:Ladders', 'pickup', netId)
+                end,
+            },
+        },
+        distance = 2.5,
+    })
+end)
+
+-- Pętla główna zasobu – obsługa trybu przenoszenia drabiny oraz podglądu
+Citizen.CreateThread(function()
+    while true do
         Citizen.Wait(0)
 
         local PlayerPed = PlayerPedId()
 
-        if not Carrying then
-            if Clipset then
-                Clipset = false
-                ResetPedMovementClipset(PlayerPed, 0)
-            end
-
-            for _, Ladder in pairs(Ladders) do
-                -- Return seems to oscillate between `number` and `table`, unclear why
-                if type(Ladder) == 'table' then
-                    if not Ladder.BeingCarried and Ladder.x and Ladder.y and Ladder.z then
-                        if Ladder.Dropped then
-                            if GetDistanceBetween(Ladder) <= 2.5 then
-								DrawText3D(Ladder.x,Ladder.y,Ladder.z+0.5, Strings[Lang]['textdraw_pickup'])
-
-                                if IsControlJustPressed(0, 38) then TriggerServerEvent('Ladders:Server:Ladders', 'pickup', Ladder.ID) end
-
-                                break
-                            end
-                        elseif not Ladder.Dropped and Ladder.Placed and not Climbing then
-                            if GetDistanceBetween(Ladder) <= 2 then
-                                DisableControlAction(0, 23, true) -- Enter vehicle
-
-                                local TopDistance = GetDistanceBetween(vector3(Ladder.x, Ladder.y, Ladder.Topz))
-                                local BottomDistance = GetDistanceBetween(vector3(Ladder.x, Ladder.y, Ladder.Bottomz))
-
-								DrawText3D(Ladder.x,Ladder.y,Ladder.z+0.15, '~g~[E]~s~ Grimper l\'échelle ~r~[F]~s~ Ramasser l\'échelle')
-								-- DrawText3D(Ladder.x,Ladder.y,Ladder.z, '')
-								
-
-                                -- If player is closer to the bottom than the top
-                                if IsControlJustPressed(0, 38) then
-                                    if TopDistance > BottomDistance then
-                                        TriggerServerEvent('Ladders:Server:Ladders', 'climb', Ladder.ID, 'up')
-                                    else
-                                        TriggerServerEvent('Ladders:Server:Ladders', 'climb', Ladder.ID, 'down')
-                                    end
-                                elseif IsDisabledControlJustPressed(0, 23) then
-                                    TriggerServerEvent('Ladders:Server:Ladders', 'pickup', Ladder.ID)
-                                end
-
-                                break
-                            end
-                        end
-                    end
-                end
-            end
-
-            if Preview then
-                ResetEntityAlpha(Preview)
-                DeleteObject(Preview)
-                SetEntityAsNoLongerNeeded(Preview)
-                Preview = false
-            end
-        else
+        if Carrying then
             if IsPedRunning(PlayerPed) or IsPedSprinting(PlayerPed) then
                 if not Clipset then
                     Clipset = true
-
                     if not HasAnimSetLoaded('MOVE_M@BAIL_BOND_TAZERED') then
                         RequestAnimSet('MOVE_M@BAIL_BOND_TAZERED')
                         while not HasAnimSetLoaded('MOVE_M@BAIL_BOND_TAZERED') do
-                            Wait(0)
+                            Citizen.Wait(0)
                         end
                     end
-
                     SetPedMovementClipset(PlayerPed, 'MOVE_M@BAIL_BOND_TAZERED', 1.0)
                 end
             elseif Clipset then
@@ -323,22 +313,11 @@ Citizen.CreateThread(function()
                 ResetPedMovementClipset(PlayerPed, 1.0)
             end
 
-			exports['mythic_notify']:PersistentAlert('start', 'ladder_E_INFO', 'inform', Strings[Lang]['place_ladder'], { ['background-color'] = '#3D9F30', ['color'] = '#fff' })
-			exports['mythic_notify']:PersistentAlert('start', 'ladder_F_INFO', 'inform', Strings[Lang]['drop_ladder'], { ['background-color'] = '#B72020', ['color'] = '#fff' })
-			exports['mythic_notify']:PersistentAlert('start', 'ladder_Y_INFO', 'inform', Strings[Lang]['toggle_preview'], { ['background-color'] = '#B0AE19', ['color'] = '#fff' })
-			exports['mythic_notify']:PersistentAlert('start', 'ladder_G_INFO', 'inform', Strings[Lang]['fold_ladder'], { ['background-color'] = '#444', ['color'] = '#fff' })
+            -- Obsługa przycisków podczas przenoszenia drabiny
             if IsControlJustPressed(0, 38) then
                 TriggerEvent('Ladders:Client:PlaceLadder')
-				exports['mythic_notify']:PersistentAlert('end', 'ladder_E_INFO')
-				exports['mythic_notify']:PersistentAlert('end', 'ladder_F_INFO')
-				exports['mythic_notify']:PersistentAlert('end', 'ladder_Y_INFO')
-				exports['mythic_notify']:PersistentAlert('end', 'ladder_G_INFO')
-            elseif IsDisabledControlJustPressed(0, 23) then
+            elseif IsControlJustPressed(0, 23) then
                 TriggerEvent('Ladders:Client:DropLadder')
-				exports['mythic_notify']:PersistentAlert('end', 'ladder_E_INFO')
-				exports['mythic_notify']:PersistentAlert('end', 'ladder_F_INFO')
-				exports['mythic_notify']:PersistentAlert('end', 'ladder_Y_INFO')
-				exports['mythic_notify']:PersistentAlert('end', 'ladder_G_INFO')
             elseif IsControlJustPressed(0, 246) then
                 if PreviewToggle then
                     PreviewToggle = false
@@ -347,34 +326,18 @@ Citizen.CreateThread(function()
                     PreviewToggle = true
                     PlaySoundFrontend(-1, 'YES', 'HUD_FRONTEND_DEFAULT_SOUNDSET', 1)
                 end
-			else if IsControlJustPressed(0, 47) then
-				exports['mythic_notify']:PersistentAlert('end', 'ladder_E_INFO')
-				exports['mythic_notify']:PersistentAlert('end', 'ladder_F_INFO')
-				exports['mythic_notify']:PersistentAlert('end', 'ladder_Y_INFO')
-				exports['mythic_notify']:PersistentAlert('end', 'ladder_G_INFO')
-				TriggerServerEvent('Ladders:Server:Ladders:Local', 'remove')
-				TriggerServerEvent('Ladders:Server:Ladders', 'update', LadderNetID, 'BeingCarried', false)
-				TriggerServerEvent('Ladders:Server:Ladders', 'update', LadderNetID, 'BeingClimbed', false)
-				TriggerServerEvent('Ladders:Server:Ladders', 'update', LadderNetID, 'Dropped', false)
-				TriggerServerEvent('Ladders:Server:Ladders', 'update', LadderNetID, 'Placed', false)
-				TriggerServerEvent('Ladders:Server:GiveItem') -- Gives back Item in Inventory
-			end
+            elseif IsControlJustPressed(0, 47) then
+                TriggerServerEvent('Ladders:Server:Ladders:Local', 'remove')
+                TriggerServerEvent('Ladders:Server:Ladders', 'update', ObjToNet(Carrying), 'BeingCarried', false)
+                TriggerServerEvent('Ladders:Server:Ladders', 'update', ObjToNet(Carrying), 'BeingClimbed', false)
+                TriggerServerEvent('Ladders:Server:Ladders', 'update', ObjToNet(Carrying), 'Dropped', false)
+                TriggerServerEvent('Ladders:Server:Ladders', 'update', ObjToNet(Carrying), 'Placed', false)
+                TriggerServerEvent('Ladders:Server:GiveItem')
             end
 
-            DisableControlAction(0, 22, true) -- Jump
-            DisableControlAction(0, 23, true) -- Enter vehicle
-            DisableControlAction(0, 24, true) -- Attack (LMB)
-            DisableControlAction(0, 44, true) -- Take Cover
-            DisableControlAction(0, 140, true) -- Attack (R)
-            DisableControlAction(0, 141, true) -- Attack (Q)
-            DisableControlAction(0, 142, true) -- Attack (LMB)
-            DisableControlAction(0, 257, true) -- Attack (LMB)
-            DisableControlAction(0, 263, true) -- Attack (R)
-            DisableControlAction(0, 264, true) -- Attack (Q)
-
+            -- Podgląd (preview) drabiny podczas przenoszenia
             if not Preview and PreviewToggle then
                 local LadderCoords = GetOffsetFromEntityInWorldCoords(PlayerPed, 0.0, 1.2, 1.32)
-
                 Preview = CreateObjectNoOffset(GetHashKey('prop_byard_ladder01'), LadderCoords, false, false, false)
                 SetEntityCollision(Preview, false, false)
                 SetEntityAlpha(Preview, 100)
@@ -383,7 +346,6 @@ Citizen.CreateThread(function()
             if Preview and PreviewToggle then
                 local LadderCoords = GetOffsetFromEntityInWorldCoords(PlayerPed, 0.0, 1.2, 1.32)
                 local LadderRot = GetEntityRotation(PlayerPed)
-
                 SetEntityCoords(Preview, LadderCoords, 1, 0, 0, 1)
                 SetEntityRotation(Preview, vector3(LadderRot.x - 20.0, LadderRot.y, LadderRot.z), 2, true)
             end
@@ -395,43 +357,53 @@ Citizen.CreateThread(function()
                 Preview = false
             end
 
+        else
+            -- Jeśli gracz nie przenosi drabiny, usuwamy podgląd
+            if Preview then
+                ResetEntityAlpha(Preview)
+                DeleteObject(Preview)
+                SetEntityAsNoLongerNeeded(Preview)
+                Preview = false
+            end
         end
 
+        -- Obsługa synchronizowanych drabin przenoszonych przez innych graczy
         for SourcePed, Ladder in pairs(LocalLadders) do
             if (SourcePed ~= -1) then
                 local Bone1 = GetEntityBoneIndexByName(SourcePed, 'BONETAG_NECK')
                 local Bone2 = GetEntityBoneIndexByName(SourcePed, 'BONETAG_R_HAND')
-                local LadderRot = GetWorldRotationOfEntityBone(SourcePed, Bone1);
-
-                AttachEntityToEntity(Ladder, SourcePed, Bone2, 0.0, 0.0, 0.0, LadderRot.x + 20.0, LadderRot.y + 180.0, LadderRot.z + 90.0, false, false, flase, true, 0, false)
+                local LadderRot = GetWorldRotationOfEntityBone(SourcePed, Bone1)
+                AttachEntityToEntity(Ladder, SourcePed, Bone2, 0.0, 0.0, 0.0, LadderRot.x + 20.0, LadderRot.y + 180.0, LadderRot.z + 90.0, false, false, false, true, 0, false)
             end
         end
 
         if Climbing then
-            if Climbing == 'rot' and ClimbingLadder then SetEntityRotation(PlayerPed, vector3(ClimbingLadder.x, ClimbingLadder.y, ClimbingLadder.z), 2, true) end
+            if Climbing == 'rot' and ClimbingLadder then 
+                SetEntityRotation(PlayerPed, vector3(ClimbingLadder.x, ClimbingLadder.y, ClimbingLadder.z), 2, true)
+            end
 
             DisableControlAction(0, 21, true) -- Sprint
-            DisableControlAction(0, 22, true) -- Jump
-            DisableControlAction(0, 23, true) -- Enter vehicle
-            DisableControlAction(0, 24, true) -- Attack (LMB)
-            DisableControlAction(0, 25, true) -- Aim
-            DisableControlAction(0, 30, true) -- Move Right
-            DisableControlAction(0, 31, true) -- Move Back
-            DisableControlAction(0, 32, true) -- Move Forward
-            DisableControlAction(0, 33, true) -- Move Back
-            DisableControlAction(0, 34, true) -- Move Left
-            DisableControlAction(0, 35, true) -- Move Right
-            DisableControlAction(0, 44, true) -- Take Cover
-            DisableControlAction(0, 140, true) -- Attack (R)
-            DisableControlAction(0, 141, true) -- Attack (Q)
-            DisableControlAction(0, 142, true) -- Attack (LMB)
-            DisableControlAction(0, 257, true) -- Attack (LMB)
-            DisableControlAction(0, 263, true) -- Attack (R)
-            DisableControlAction(0, 264, true) -- Attack (Q)
-            DisableControlAction(0, 266, true) -- Move Left
-            DisableControlAction(0, 267, true) -- Move Right
-            DisableControlAction(0, 268, true) -- Move Up
-            DisableControlAction(0, 269, true) -- Move Down
+            DisableControlAction(0, 22, true) -- Skok
+            DisableControlAction(0, 23, true) -- Wsiadanie do pojazdu
+            DisableControlAction(0, 24, true) -- Atak (LPM)
+            DisableControlAction(0, 25, true) -- Celowanie
+            DisableControlAction(0, 30, true) -- Ruch w prawo
+            DisableControlAction(0, 31, true) -- Ruch do tyłu
+            DisableControlAction(0, 32, true) -- Ruch do przodu
+            DisableControlAction(0, 33, true) -- Ruch do tyłu
+            DisableControlAction(0, 34, true) -- Ruch w lewo
+            DisableControlAction(0, 35, true) -- Ruch w prawo
+            DisableControlAction(0, 44, true) -- Przykrycie
+            DisableControlAction(0, 140, true) -- Atak (R)
+            DisableControlAction(0, 141, true) -- Atak (Q)
+            DisableControlAction(0, 142, true) -- Atak (LPM)
+            DisableControlAction(0, 257, true) -- Atak (LPM)
+            DisableControlAction(0, 263, true) -- Atak (R)
+            DisableControlAction(0, 264, true) -- Atak (Q)
+            DisableControlAction(0, 266, true) -- Ruch w lewo
+            DisableControlAction(0, 267, true) -- Ruch w prawo
+            DisableControlAction(0, 268, true) -- Ruch w górę
+            DisableControlAction(0, 269, true) -- Ruch w dół
         end
 
     end
