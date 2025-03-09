@@ -1,4 +1,4 @@
-Lang = 'EN' -- EN or FR
+Lang = 'PL' -- EN or FR
 
 Strings = {
 	['EN'] = {
@@ -20,5 +20,15 @@ Strings = {
 		['fold_ladder'] = "[G] Ramasser dans l'inventaire",
 		['textdraw_pickup'] = "~g~[E]~s~ Ramasser l'échelle",
 		['textdraw_climb_pickup'] = "~g~[E]~s~ Grimper l'échelle ~r~[F]~s~ Ramasser l'échelle",
+	},
+	['PL'] = {
+	        ['already_carrying'] = "Już niesiesz drabinę.",
+	        ['put_inv_ladder'] = "Złożyłeś drabinę i schowałeś ją do torby.",
+	        ['place_ladder'] = "[E] Postaw drabinę",
+	        ['drop_ladder'] = "[F] Upuść drabinę",
+	        ['toggle_preview'] = "[Y] Przełącz podgląd",
+	        ['fold_ladder'] = "[G] Złóż drabinę",
+	        ['textdraw_pickup'] = "~g~[E]~s~ Podnieś drabinę",
+	        ['textdraw_climb_pickup'] = "~g~[E]~s~ Wejdź na drabinę ~r~[F]~s~ Podnieś drabinę",
 	}
 }
